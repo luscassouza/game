@@ -5,11 +5,11 @@ import { Play, Clock } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import DepositDialog from "../components/DepositDialog";
+import Deposito from "../deposito/page";
+import Link from "next/link";
 
 export default function Raspadinha() {
     const saldo = 0;
-    const [isDepositDialogOpen, setIsDepositDialogOpen] = useState(false);
     const iniciarJogo  = () => {
         toast.error("Saldo Insuficiente, Faça um Deposito para Poder Jogar", {
             position: "top-center",
@@ -41,19 +41,20 @@ export default function Raspadinha() {
                     </div>
 
                     {/* Área de Raspar */}
-                    <div className="flex-1 rounded-md min-w-[300px] md:w-[580px] bg-gray-500 md:h-[530px] flex flex-col items-center justify-center px-4 md:px-8">
+                    <div className="flex-1 rounded-md min-w-[300px] min-h-[300px] md:w-[580px] bg-gray-500 md:h-[530px] flex flex-col items-center justify-center px-4 md:px-8">
                         <div  className="text-center mb-4 md:mb-8">
                             <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold text-gray-600 mb-2 md:mb-4">
                                 RASPE AQUI
                             </h2>
 
                             {/* Ícone de mão */}
-                            <div className="text-6xl md:text-8xl mb-4 md:mb-8">👆</div>
+                            <div className="animation-bounce text-6xl md:text-8xl mb-4 md:mb-8">👆</div>
+
 
                             {/* Botão Comprar e Raspar */}
-                            <Button onClick={()=> setIsDepositDialogOpen(true)} className="animation-bounce hover:bg-green-700 md:text-2xl md:p-6 bg-green-600 z-[10000000]">
+                            <Link href="/deposito" className="animation-bounce rounded-md hover:bg-green-700 md:text-2xl p-2 bg-green-600 z-[10000000]">
                                 Comprar e Raspar (R$ 1,00)
-                            </Button>
+                            </Link>
                         </div>
                     </div>
 
@@ -108,7 +109,6 @@ export default function Raspadinha() {
                     </div>
                 </div>
             </div>
-            <DepositDialog isDepositOpen={isDepositDialogOpen} setIsDepositOpen={setIsDepositDialogOpen} />
         </div>
     );
 }

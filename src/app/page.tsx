@@ -125,17 +125,17 @@ export default function Home() {
           >
             <CarouselContent>
               <CarouselItem>
-                <div className="relative  h-[80px] md:h-80 rounded-xl overflow-hidden bg-gradient-to-r from-green-600 to-green-400">
+                <div className="relative  h-[150px] md:h-80 rounded-xl overflow-hidden bg-gradient-to-r from-green-600 to-green-400">
                   <Link href={"/raspadinha"}>
-                    <Image className="object-contain" src="https://megaraspadinha.site/storage/01K11Y0D93QQKSNSBTKPGSZS8B.webp" alt="Money Stack" fill />
+                    <Image className="object-cover" src="/banner-1.png" alt="Money Stack" fill />
                   </Link>
 
                 </div>
               </CarouselItem>
               <CarouselItem>
-                <div className="relative h-[80px] md:h-80 rounded-xl overflow-hidden bg-gradient-to-r from-green-600 to-green-800">
+                <div className="relative h-[150px] md:h-80 rounded-xl overflow-hidden bg-gradient-to-r from-green-600 to-green-800">
                   <Link href={"raspadinha"}>
-                    <Image className="object-contain" src="https://megaraspadinha.site/storage/01K11Y0SWT72REQG19V9CRQ8ZJ.webp" alt="premios" fill /></Link>
+                    <Image className="object-cover position-right" src="/banner-2.png" alt="premios" fill /></Link>
 
                 </div>
               </CarouselItem>
