@@ -8,6 +8,7 @@ import { ToggleGroup } from "@radix-ui/react-toggle-group";
 import { ToggleGroupItem } from "@/components/ui/toggle-group";
 import axios from "axios";
 import { toast } from "sonner";
+
 export default function Deposito() {
     const [valorSelecionado, setValorSelecionado] = useState<number>(30);
     const [gerandoPix, setGerandoPix] = useState(false);
@@ -31,29 +32,49 @@ export default function Deposito() {
     const handleGerarPix = async () => {
         setGerandoPix(true)
         try {
-            const data = {
-                value: valorSelecionado * 100,
+            const secretKey = process.env.NEXT_PUBLIC_API_SECRET_KEY; // sua variável de ambiente
+            const amount = valorSelecionado * 100;
 
-                webhook_url: "",
-                split_rules: []
+            if (!secretKey) {
+                return
+            }
+
+            const basicAuth = Buffer.from(`${secretKey}:x`).toString('base64');
+            const options = {
+                method: 'POST',
+                url: 'https://api.masterpagamentosbr.com/v1/transactions',
+                headers: {
+                    accept: 'application/json',
+                    'content-type': 'application/json',
+                    authorization: 'Basic ' + basicAuth
+
+                },
+                data: {
+                    customer: {
+                        document: { type: 'cpf', number: '20489574041' },
+                        name: 'teste',
+                        email: 'teste@email.com',
+                        phone: '1199999999'
+                    },
+                    shipping: { fee: 0 },
+                    paymentMethod: 'pix',
+                    amount: amount,
+
+                    items: [{ tangible: false, title: 'deposito', unitPrice: amount, quantity: 1 }]
+
+                }
             };
-            // Substitua pela URL da sua API
-            const response = await axios.post('https://api.pushinpay.com.br/api/pix/cashIn', data,
-                {
-                    headers: {
-                        'Authorization': 'Bearer ' + process.env.NEXT_PUBLIC_API_SECRET_KEY,
-                        'Content-Type': 'application/json'
-                    }
-                });
 
-            // Extraindo os dados da resposta
-            const { qr_code, qr_code_base64 } = response.data;
-
-            // Atualizando os estados
-            setPixCode(qr_code);
-            setPixQrCode(qr_code_base64);
-            setPixGerado(true);
-            setGerandoPix(false);
+            axios
+                .request(options)
+                .then(res => {
+                    setPixCode(res.data.pix.qrcode);
+                    setPixQrCode(res.data.pix.qrCode);
+                    setPixGerado(true);
+                    toast.success('PIX gerado com sucesso!');
+                    setGerandoPix(false);
+                })
+                .catch(err => console.error(err));
 
         } catch (error) {
             console.error('Erro ao gerar Pix:', error);
@@ -139,8 +160,8 @@ export default function Deposito() {
                         <div className="mb-20">
                             <div className="bg-zinc-800 rounded-lg p-4 mb-6">
                                 <h3 className="text-white text-lg font-bold mb-4 text-center">PIX Gerado</h3>
-
-                                {/* QR Code */}
+                                <p className="text-white mb-2 text-center">Vá na área pix do seu banco, procure por "Pix copia e cola" e cole o código abaixo</p>
+                                {/* QR Code
                                 <div className="flex justify-center mb-4">
                                     <div className="bg-white p-2 rounded-lg">
                                         <Image
@@ -150,7 +171,7 @@ export default function Deposito() {
                                             height={200}
                                         />
                                     </div>
-                                </div>
+                                </div> */}
 
                                 {/* Código PIX */}
                                 <div className="bg-zinc-700 p-3 rounded-md flex items-center justify-between mb-4">
