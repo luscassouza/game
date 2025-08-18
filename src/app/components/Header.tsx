@@ -11,6 +11,9 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { supabaseBrowser } from "@/lib/supabase/client";
+
+
 
 
 
@@ -20,12 +23,16 @@ export default function Header() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [registerForm, setRegisterForm] = useState({
-        username: "",
         email: "",
         password: "",
         confirmPassword: "",
         fullName: ""
     });
+    const supabase = supabaseBrowser();
+    const [userConfig, setUserConfig] = useState<ContaUsuario | null>(null);
+
+
+
     const [loginForm, setLoginForm] = useState({
         email: "",
         password: ""
@@ -33,7 +40,6 @@ export default function Header() {
 
     // Estados de erro
     const [registerErrors, setRegisterErrors] = useState({
-        username: "",
         email: "",
         password: "",
         confirmPassword: "",
@@ -46,27 +52,30 @@ export default function Header() {
         general: ""
     });
 
-    const [contaUsuario, setContaUsuario] = useState<ContaUsuario | null>(null);
-    const [saldoUsuario, setSaldoUsuario] = useState(0);
+    const [autenticated, setAutenticated] = useState(false);
+
+    const checkAuth = async () => {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+            return;
+        }
+
+        if (data?.user) {
+            setAutenticated(true);
+            const {data: userConfig, error: userConfigError} = await supabase.from("user_configs").select("*").eq("supabaseuserid", data.user.id).single();
+            if (userConfigError) {
+                return;
+            }
+            setUserConfig({
+                saldoUsuario: userConfig.balance,
+                fullName: userConfig.name,
+            } as ContaUsuario);
+
+        }
+    };
     // Carregar conta do localStorage
     useEffect(() => {
-        const conta = localStorage.getItem("conta");
-        const logado = localStorage.getItem("logado");
-        const saldo = localStorage.getItem("saldo");
-
-        if (conta && logado === "true") {
-            try {
-                const contaParsed = JSON.parse(conta) as ContaUsuario;
-                setContaUsuario(contaParsed);
-
-                // Carregar saldo se existir
-                if (saldo) {
-                    setSaldoUsuario(parseFloat(saldo));
-                }
-            } catch (error) {
-                console.error("Erro ao fazer parse da conta:", error);
-            }
-        }
+        checkAuth();
     }, []);
 
     // Função para validar email
@@ -78,7 +87,7 @@ export default function Header() {
     // Função para limpar erros
     const clearRegisterErrors = () => {
         setRegisterErrors({
-            username: "",
+
             email: "",
             password: "",
             confirmPassword: "",
@@ -141,23 +150,22 @@ export default function Header() {
         }
     };
 
-    const handleRegister = () => {
+    const handleRegister = async () => {
         // Limpar erros gerais
         clearRegisterErrors();
 
         // Validar todos os campos
-        validateRegisterField("username", registerForm.username);
         validateRegisterField("password", registerForm.password);
         validateRegisterField("confirmPassword", registerForm.confirmPassword);
         validateRegisterField("fullName", registerForm.fullName);
 
         // Verificar se há erros
         const hasErrors = Object.values(registerErrors).some(error => error !== "") ||
-            !registerForm.username.trim() ||
+            !registerForm.email.trim() ||
             !registerForm.password ||
             !registerForm.confirmPassword ||
             !registerForm.fullName.trim() ||
-            !validateEmail(registerForm.username) ||
+            !validateEmail(registerForm.email) ||
             registerForm.password.length < 6 ||
             registerForm.password !== registerForm.confirmPassword;
 
@@ -165,16 +173,28 @@ export default function Header() {
             return;
         }
 
-        const novaConta: ContaUsuario = {
-            email: registerForm.username, // username é o email
+        const { data, error } = await supabase.auth.signUp({
+            email: registerForm.email,
             password: registerForm.password,
-            fullName: registerForm.fullName,
+            options: { data: { name: registerForm.fullName } } // vai cair no trigger (raw_user_meta_data)
+        });
+
+        if (error) {
+            toast.error("Conta registrada, faça um deposito para jogar", {
+                position: "top-center",
+                style: {
+                    background: "#059004",
+                    color: "white",
+                    border: "1px #059004"
+                }
+            })
+            return;
+
         };
 
-        localStorage.setItem("conta", JSON.stringify(novaConta));
-        localStorage.setItem("logado", "true");
+
         navigate("/deposito")
-                toast.success("Conta registrada, faça um deposito para jogar", {
+        toast.success("Conta registrada, faça um deposito para jogar", {
             position: "top-center",
             style: {
                 background: "#059004",
@@ -182,13 +202,13 @@ export default function Header() {
                 border: "1px #059004"
             }
         })
-        setContaUsuario(novaConta);
+
         setIsRegisterOpen(false);
-        setRegisterForm({ username: "", email: "", password: "", confirmPassword: "", fullName: "" });
+        setRegisterForm({ email: "", password: "", confirmPassword: "", fullName: "" });
         clearRegisterErrors();
     };
 
-    const handleLogin = () => {
+    const handleLogin = async () => {
         clearLoginErrors();
 
         if (!loginForm.email.trim()) {
@@ -201,52 +221,37 @@ export default function Header() {
             return;
         }
 
-        const conta = localStorage.getItem("conta");
-        if (!conta) {
-            setLoginErrors(prev => ({ ...prev, general: "Nenhuma conta encontrada. Faça o cadastro primeiro!" }));
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: loginForm.email,
+            password: loginForm.password,
+        })
+
+        if (error) {
+            setLoginErrors(prev => ({ ...prev, general: "Email ou senha incorretos!" }));
             return;
         }
 
-        try {
-            const contaParsed = JSON.parse(conta) as ContaUsuario;
-
-            if (contaParsed.email === loginForm.email && contaParsed.password === loginForm.password) {
-                setContaUsuario(contaParsed);
-                setLoginForm({ email: "", password: "" });
-                clearLoginErrors();
-
-                // Adicionar registro de login no localStorage
-                localStorage.setItem("logado", "true");
-
-                // Definir saldo inicial se não existir
-                const saldoAtual = localStorage.getItem("saldo");
-                if (!saldoAtual) {
-                    const saldoInicial = 0;
-                    localStorage.setItem("saldo", saldoInicial.toString());
-                    setSaldoUsuario(saldoInicial);
-                } else {
-                    setSaldoUsuario(parseFloat(saldoAtual));
-                }
-                navigate("/deposito");
-
-            } else {
-                setLoginErrors(prev => ({ ...prev, general: "Email ou senha incorretos!" }));
+        navigate("/deposito");
+        toast.success("Faça um deposito para Jogar e Ganhar!", {
+            position: "top-center",
+            style: {
+                background: "#059004",
+                color: "white",
+                border: "1px #059004"
             }
-        } catch (error) {
-            setLoginErrors(prev => ({ ...prev, general: "Erro ao fazer login!" }));
-        }
-    };
+        })
+        setLoginForm({ email: "", password: "" })
 
-    const handleLogout = () => {
-        setContaUsuario(null);
-        // Alterar status de login para false ao invés de remover a conta
-        localStorage.setItem("logado", "false");
-        navigate("/");
+        setIsRegisterOpen(false)
+    }
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
 
     };
     const router = useRouter();
 
-    const navigate =(path: string) => {
+    const navigate = (path: string) => {
         router.push(path);
     }
     const handleOpenRegister = () => {
@@ -272,11 +277,12 @@ export default function Header() {
 
                 </div>
                 <div className="flex items-center gap-4">
-                    {contaUsuario ? (
+                    {autenticated ? (
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2 bg-gray-800 px-2 md:px-3 py-1 md:py-2 rounded-lg">
                                 <span className="text-green-400 font-bold text-xs md:text-sm">R$</span>
-                                <span className="text-white font-bold text-xs md:text-sm">{saldoUsuario.toFixed(2)}</span>
+                                <span className="text-white font-bold text-xs md:text-sm">{userConfig?.saldoUsuario.toFixed(2)}</span>
+
                             </div>
                             <a
                                 href="/deposito"
@@ -295,20 +301,22 @@ export default function Header() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="w-56 bg-zinc-900 border-gray-700" >
                                     <div className="px-2 py-1.5">
-                                        <p className="text-sm font-medium text-white">{contaUsuario.email}</p>
-                                        <p className="text-xs text-gray-400">Saldo: R$ {saldoUsuario.toFixed(2)}</p>
+                                        <p className="text-sm font-medium text-white">{userConfig?.fullName}</p>
+
+                                        <p className="text-xs text-gray-400">Saldo: R$ {userConfig?.saldoUsuario.toFixed(2)}</p>
+
                                     </div>
                                     <DropdownMenuSeparator className="bg-gray-700" />
 
 
-                                  
-                                        <DropdownMenuItem onClick={() => {
-                                            navigate("/account");
-                                        }} className="text-white cursor-pointer">
-                                            <User className="mr-2 h-4 w-4" />
-                                            <span>Detalhes da conta</span>
-                                        </DropdownMenuItem>
-                                    
+
+                                    <DropdownMenuItem onClick={() => {
+                                        navigate("/account");
+                                    }} className="text-white cursor-pointer">
+                                        <User className="mr-2 h-4 w-4" />
+                                        <span>Detalhes da conta</span>
+                                    </DropdownMenuItem>
+
 
 
 
@@ -384,18 +392,18 @@ export default function Header() {
                                                                 <Input
                                                                     type="email"
                                                                     placeholder="Email do usuário"
-                                                                    value={registerForm.username}
+                                                                    value={registerForm.email}
                                                                     onChange={(e) => {
-                                                                        setRegisterForm({ ...registerForm, username: e.target.value });
-                                                                        validateRegisterField("username", e.target.value);
+                                                                        setRegisterForm({ ...registerForm, email: e.target.value });
+                                                                        validateRegisterField("email", e.target.value);
                                                                     }}
-                                                                    className={`pl-10 bg-zinc-900 border-gray-600 text-white rounded-md ${registerErrors.username ? "border-red-500" : ""
+                                                                    className={`pl-10 bg-zinc-900 border-gray-600 text-white rounded-md ${registerErrors.email ? "border-red-500" : ""
                                                                         }`}
                                                                 />
-                                                                {registerErrors.username && (
+                                                                {registerErrors.email && (
                                                                     <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
                                                                         <AlertCircle className="h-3 w-3" />
-                                                                        {registerErrors.username}
+                                                                        {registerErrors.email}
                                                                     </p>
                                                                 )}
                                                             </div>
@@ -606,18 +614,18 @@ export default function Header() {
                                                                 <Input
                                                                     type="email"
                                                                     placeholder="Email do usuário"
-                                                                    value={registerForm.username}
+                                                                    value={registerForm.email}
                                                                     onChange={(e) => {
-                                                                        setRegisterForm({ ...registerForm, username: e.target.value });
-                                                                        validateRegisterField("username", e.target.value);
+                                                                        setRegisterForm({ ...registerForm, email: e.target.value });
+                                                                        validateRegisterField("email", e.target.value);
                                                                     }}
-                                                                    className={`pl-10 bg-zinc-800 border-gray-600 text-white ${registerErrors.username ? "border-red-500" : ""
+                                                                    className={`pl-10 bg-zinc-800 border-gray-600 text-white ${registerErrors.email ? "border-red-500" : ""
                                                                         }`}
                                                                 />
-                                                                {registerErrors.username && (
+                                                                {registerErrors.email && (
                                                                     <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
                                                                         <AlertCircle className="h-3 w-3" />
-                                                                        {registerErrors.username}
+                                                                        {registerErrors.email}
                                                                     </p>
                                                                 )}
                                                             </div>

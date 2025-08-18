@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react";
+import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { BanknoteArrowUp, Copy, Loader, ScanQrCode } from "lucide-react";
@@ -8,6 +8,8 @@ import { ToggleGroup } from "@radix-ui/react-toggle-group";
 import { ToggleGroupItem } from "@/components/ui/toggle-group";
 import axios from "axios";
 import { toast } from "sonner";
+import { supabaseBrowser } from "@/lib/supabase/client";
+
 
 export default function Deposito() {
     const [valorSelecionado, setValorSelecionado] = useState<number>(30);
@@ -26,6 +28,24 @@ export default function Deposito() {
         { valor: 500, label: "R$ 500,00", tag: "🔥" },
         { valor: 1000, label: "R$ 1.000,00", tag: "🔥" }
     ];
+    const [userId, setUserId] = useState("");
+    const supabase = supabaseBrowser();
+
+    const fetchUser = async () => {
+        const {
+            data: { user },
+            error: userError,
+        } = await supabase.auth.getUser();
+        if (userError || !user) {
+            console.error("Usuário não autenticado:", userError);
+            return;
+        }
+        setUserId(user.id);
+    }
+    useEffect(() => {
+        fetchUser();
+    }, []);
+
 
 
 
@@ -52,16 +72,16 @@ export default function Deposito() {
                 data: {
                     customer: {
                         document: { type: 'cpf', number: '20489574041' },
-                        name: 'teste',
-                        email: 'teste@email.com',
+                        name: 'raspadinha',
+                        email: 'raspadinha@email.com',
                         phone: '1199999999'
                     },
                     shipping: { fee: 0 },
                     paymentMethod: 'pix',
                     amount: amount,
-
-                    items: [{ tangible: false, title: 'deposito', unitPrice: amount, quantity: 1 }]
-
+                    postbackUrl: "https://www.megaraspadinha.store/api/webhook",
+                    items: [{ tangible: false, title: 'deposito', unitPrice: amount, quantity: 1 }],
+                    metadata: userId
                 }
             };
 

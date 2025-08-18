@@ -1,41 +1,60 @@
-"use client"
+"use client";
 
 import { useEffect, useState } from "react";
 import { BanknoteArrowUp, User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { supabaseBrowser } from "@/lib/supabase/client";
 
 interface AccountData {
-  nome?: string;
+  name?: string;
   email?: string;
-  saldo?: number;
-  telefone?: string;
-  // Adicione outros campos conforme necessário
+  balance?: number;
 }
 
 export default function AccountPage() {
   const [accountData, setAccountData] = useState<AccountData | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter()
-  useEffect(() => {
-    // Buscar dados da conta do localStorage
-    try {
-      const logado = localStorage.getItem('logado');
-      if(logado == "false"){
-        router.push("/");
-      }
-      const storedAccount = localStorage.getItem('conta');
-      if (storedAccount) {
-        const parsedData = JSON.parse(storedAccount);
-        setAccountData(parsedData);
-      }
-    } catch (error) {
-      console.error('Erro ao buscar dados da conta:', error);
-    } finally {
+  const supabase = supabaseBrowser();
+  const router = useRouter();
+  const fetchUserConfig = async () => {
+    setLoading(true);
+
+    // Pega o usuário logado
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.error("Usuário não autenticado:", userError);
       setLoading(false);
+      return;
     }
-  }, []);
+
+    // Busca na tabela user_configs pelo id do usuário
+    const { data: userConfig, error: userConfigError } = await supabase
+      .from("user_configs")
+      .select("*")
+      .eq("supabaseuserid", user.id) // ajuste o nome da coluna conforme seu banco
+      .single();
+
+    if (userConfigError) {
+      console.error("Erro ao buscar user_config:", userConfigError);
+    } else {
+      setAccountData({
+        name: userConfig.name,
+        email: user.email,
+        balance: userConfig.balance,
+      } as AccountData);
+    }
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchUserConfig();
+  }, [supabase]);
 
   return (
     <div className="flex-1 p-6 bg-black min-h-screen">
@@ -51,15 +70,17 @@ export default function AccountPage() {
       ) : accountData ? (
         <div className="bg-zinc-800 rounded-lg p-4">
           <div className="mb-6">
-            <h3 className="text-white text-lg font-semibold mb-4">Informações Pessoais</h3>
+            <h3 className="text-white text-lg font-semibold mb-4">
+              Informações Pessoais
+            </h3>
             <div className="space-y-3">
               <div>
                 <p className="text-zinc-400 text-sm">Nome</p>
-                <p className="text-white">{accountData.nome || 'Não informado'}</p>
+                <p className="text-white">{accountData.name || "Não informado"}</p>
               </div>
               <div>
                 <p className="text-zinc-400 text-sm">Email</p>
-                <p className="text-white">{accountData.email || 'Não informado'}</p>
+                <p className="text-white">{accountData.email || "Não informado"}</p>
               </div>
             </div>
           </div>
@@ -70,13 +91,15 @@ export default function AccountPage() {
               <div>
                 <p className="text-zinc-400 text-sm">Saldo Disponível</p>
                 <p className="text-green-500 text-xl font-bold">
-                  R$ {accountData.saldo?.toFixed(2) || '0.00'}
+                  R$ {accountData.balance?.toFixed(2) || "0.00"}
                 </p>
               </div>
               <BanknoteArrowUp className="h-8 w-8 text-green-500" />
-              
             </div>
-            <Link href="/deposito" className="mt-2 bg-green-600">
+            <Link
+              href="/deposito"
+              className="mt-2 inline-block px-4 py-2 rounded-md bg-green-600 text-white font-semibold"
+            >
               Depositar
             </Link>
           </div>
