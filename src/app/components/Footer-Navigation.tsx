@@ -1,13 +1,14 @@
 "use client"
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { supabaseBrowser } from "@/lib/supabase/client";
 import { Home, ReceiptText, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 export default function FooterNavigation() {
-
+    const supabase = supabaseBrowser();
     const router = useRouter();
     const handleClick = () => {
         const logado = localStorage.getItem('logado');
@@ -25,9 +26,9 @@ export default function FooterNavigation() {
         router.push("/deposito");
     }
 
-    const handleClickRaspadinha = () => {
-        const logado = localStorage.getItem('logado');
-        if (logado == "false") {
+    const handleClickRaspadinha = async () => {
+        const {data, error} = await supabase.auth.getUser();  
+        if (!data.user || error) {
             toast.error("Faça login para jogar", {
                 position: "top-center",
                 style: {
@@ -38,7 +39,7 @@ export default function FooterNavigation() {
             })
             return;
         }
-        router.push("/raspadinha");
+        router.push("/raspadinha?p=MjA0NTQyNWM1MTU0");
     }
 
 

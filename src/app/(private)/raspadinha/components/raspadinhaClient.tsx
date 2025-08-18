@@ -281,19 +281,6 @@ export default function RaspadinhaContent() {
                 })
             });
 
-            if (response.ok) {
-                setSaldo(prev => prev + amount);
-                toast.success(`Parabéns! Você ganhou R$ ${amount.toFixed(2)}!`, {
-                    position: "top-center",
-                    style: {
-                        background: "#059004",
-                        color: "white",
-                        border: "1px solid #059004"
-                    }
-                });
-            } else {
-                throw new Error('Erro ao processar ganhos');
-            }
         } catch (error) {
             console.error('Erro ao adicionar ganhos:', error);
             toast.error("Erro ao processar seus ganhos. Tente novamente.", {
@@ -504,14 +491,6 @@ export default function RaspadinhaContent() {
                 // Todos os itens foram revelados sem vitória - DEDUZIR SALDO
                 setGameResult({ won: false, amount: 0 });
                 deductBalance(); // Deduzir R$ 1,00 do saldo
-                toast.info("Que pena! Tente novamente.", {
-                    position: "top-center",
-                    style: {
-                        background: "#3b82f6",
-                        color: "white",
-                        border: "1px solid #2563eb"
-                    }
-                });
             }
         }
     };
@@ -588,7 +567,7 @@ export default function RaspadinhaContent() {
                     </div>
 
                     {/* Área de Raspar */}
-                    <div className="flex-1 flex flex-col items-center justify-center px-4 md:px-8">
+                    <div className="flex-1 flex flex-col items-center min-h-[400px] justify-center px-4 md:px-8">
                         {!gameActive ? (
                             <div className="text-center mb-4 md:mb-8">
                                 <h2 className="text-4xl md:text-6xl lg:text-8xl font-bold text-gray-600 mb-2 md:mb-4">
@@ -614,14 +593,14 @@ export default function RaspadinhaContent() {
                             <div className="relative bg-gray-500 rounded-lg p-4 mx-auto w-[300px] md:w-[400px]">
                                 <canvas
                                     ref={canvasRef}
-                                    className="absolute top-4 left-4 rounded-lg w-[268px] h-[214px] md:w-[400px] md:h-[320px]"
+                                    className="absolute top-4 left-4 rounded-lg w-[268px] h-[314px] md:w-[400px] md:h-[320px]"
                                 />
                                 <canvas
                                     ref={overlayCanvasRef}
                                     className={`absolute top-4 left-4 rounded-lg ${gameResult
-                                            ? "cursor-not-allowed opacity-75"
-                                            : "cursor-pointer hover:brightness-110"
-                                        } w-[268px] h-[214px] md:w-[400px] md:h-[320px]`}
+                                        ? "cursor-not-allowed opacity-75"
+                                        : "cursor-pointer hover:brightness-110"
+                                        } w-[268px] h-[314px] md:w-[400px] md:h-[320px]`}
                                     onClick={handleScratch}
                                     onTouchStart={handleScratch}
                                     onMouseMove={handleMouseMove}
@@ -629,7 +608,7 @@ export default function RaspadinhaContent() {
                                 />
 
                                 {/* Container para manter o espaço */}
-                                <div className="w-[268px] h-[214px] md:w-[400px] md:h-[320px]"></div>
+                                <div className="w-[268px] h-[314px] md:w-[400px] md:h-[320px]"></div>
 
                                 {gameResult && (
                                     <div className="absolute top-8 left-8 right-8 bg-black bg-opacity-90 text-white p-4 rounded-lg text-center z-10">
