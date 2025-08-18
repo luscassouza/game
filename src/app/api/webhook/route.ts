@@ -7,9 +7,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     // 🔑 Normalmente o gateway envia algo como userId e amount
-    const { metadata, amount } = body;
+    const { data } = body;
 
-    if (!metadata || !amount) {
+    if (!data.metadata || !data.amount) {
+
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
@@ -18,8 +19,10 @@ export async function POST(req: NextRequest) {
 
     // 3. Chamar sua função
     const { error } = await supabase.rpc("add_balance", {
-      p_user_id: metadata,
-      p_amount: amount/100,
+      p_user_id: data.metadata,
+
+      p_amount: data.amount/100,
+
     });
 
     if (error) {
