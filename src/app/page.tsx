@@ -9,6 +9,18 @@ import { Clover, Coins, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { supabaseBrowser } from "@/lib/supabase/client";
+
+// Funções de criptografia simples
+const encryptPrice = (price: string): string => {
+  const key = "raspadinha2025";
+  let encrypted = "";
+  for (let i = 0; i < price.length; i++) {
+    const charCode = price.charCodeAt(i) ^ key.charCodeAt(i % key.length);
+    encrypted += charCode.toString(16).padStart(2, '0');
+  }
+  return btoa(encrypted); // Base64 encode
+};
 
 export default function Home() {
   const [api, setApi] = useState<any>();
@@ -88,11 +100,12 @@ export default function Home() {
   const filteredGames = selectedCategory === "destaque"
     ? games
     : games.filter(game => game.category === selectedCategory);
-
-  const startGame = () => {
-    const logado = localStorage.getItem("logado");
-    if (logado == "true") {
-      router.push("/raspadinha");
+  const supabase = supabaseBrowser();
+  const startGame = async (gamePrice: string) => {
+    const {data: userData, error: error} = await supabase.auth.getUser();
+    if (userData.user) {
+      const encryptedPrice = encryptPrice(gamePrice);
+      router.push(`/raspadinha?p=${encodeURIComponent(encryptedPrice)}`);
     } else {
       toast.error("Faça login para jogar", {
         position: "top-center",
@@ -270,7 +283,7 @@ export default function Home() {
                       <Gift className="h-4 w-4 inline-block" />
                       {game.prize}</div>
                   </div>
-                  <Button onClick={() => startGame()} className="bg-green-500 p-2 rounded-md hover:bg-green-600 text-white">
+                  <Button onClick={() => startGame(game.price)} className="bg-green-500 p-2 rounded-md hover:bg-green-600 text-white">
                     <Coins className="h-4 w-4" />
                     Jogar
                   </Button>
