@@ -140,7 +140,7 @@ export default function Home() {
               <CarouselItem>
                 <div className="relative  h-[150px] md:h-80 rounded-xl overflow-hidden bg-gradient-to-r from-green-600 to-green-400">
                   <Link href={"/raspadinha"}>
-                    <Image className="object-cover" src="/banner-1.png" alt="Money Stack" fill />
+                    <Image className="object-cover" src="/banner-1.png" alt="Money Stack" sizes="100vw" fill />
                   </Link>
 
                 </div>
@@ -148,7 +148,7 @@ export default function Home() {
               <CarouselItem>
                 <div className="relative h-[150px] md:h-80 rounded-xl overflow-hidden bg-gradient-to-r from-green-600 to-green-800">
                   <Link href={"raspadinha"}>
-                    <Image className="object-cover position-right" src="/banner-2.png" alt="premios" fill /></Link>
+                    <Image className="object-cover position-right" src="/banner-2.png" sizes="100vw" alt="premios" fill /></Link>
 
                 </div>
               </CarouselItem>

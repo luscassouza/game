@@ -18,7 +18,7 @@ export default function Deposito() {
     const [pixCode, setPixCode] = useState("");
     const [pixQrCode, setPixQrCode] = useState("");    // Dados de depósito
     const valoresDeposito = [
-        { valor: 15, label: "R$ 15,00", tag: "" },
+        { valor: 1, label: "R$ 15,00", tag: "" },
         { valor: 20, label: "R$ 20,00", tag: "🔥" },
         { valor: 30, label: "R$ 30,00", tag: "🔥" },
         { valor: 50, label: "R$ 50,00", tag: "🔥" },
@@ -59,42 +59,44 @@ export default function Deposito() {
                 return
             }
 
-            const basicAuth = Buffer.from(`${secretKey}:x`).toString('base64');
             const options = {
                 method: 'POST',
-                url: 'https://api.masterpagamentosbr.com/v1/transactions',
+                url: 'https://api.pushinpay.com.br/api/pix/cashIn',
                 headers: {
                     accept: 'application/json',
                     'content-type': 'application/json',
-                    authorization: 'Basic ' + basicAuth
+                    authorization: `Bearer ${secretKey}`
 
                 },
                 data: {
-                    customer: {
-                        document: { type: 'cpf', number: '20489574041' },
-                        name: 'raspadinha',
-                        email: 'raspadinha@email.com',
-                        phone: '1199999999'
-                    },
-                    shipping: { fee: 0 },
-                    paymentMethod: 'pix',
-                    amount: amount,
-                    postbackUrl: "https://www.megaraspadinha.store/api/webhook",
-                    items: [{ tangible: false, title: 'deposito', unitPrice: amount, quantity: 1 }],
-                    metadata: userId
+                    value: amount,
+                    webhook_url: "https://www.megaraspadinha.store/api/webhook",
+                    split: [],
                 }
             };
 
-            axios
-                .request(options)
-                .then(res => {
-                    setPixCode(res.data.pix.qrcode);
-                    setPixQrCode(res.data.pix.qrCode);
-                    setPixGerado(true);
-                    toast.success('PIX gerado com sucesso!');
-                    setGerandoPix(false);
-                })
-                .catch(err => console.error(err));
+           const response = await axios
+                .request(options);
+            if(response.status != 200){
+                toast.error("Erro ao tentar gerar pix")
+            }
+
+            const {id, qr_code, qr_code_base64, status} = await response.data;
+
+            await supabase.from("transactions").insert({
+                user_id: userId,
+                external_id: id,
+                amount: amount,
+                status: status,
+            })
+
+            setPixCode(qr_code);
+            setPixQrCode(qr_code_base64);
+            setPixGerado(true);
+            toast.success('PIX gerado com sucesso!');
+            setGerandoPix(false);
+
+
 
         } catch (error) {
             console.error('Erro ao gerar Pix:', error);
@@ -111,10 +113,10 @@ export default function Deposito() {
     return <>
         {/* Header com Imagem */}
         <div className="w-full flex flex-col items-center min-h-screen  bg-black">
-            <div className="w-full bg-black h-[127px]  relative md:h-[250px]">
-                <Image fill alt="promotion" className="object-cover rounded-b-3xl" src="/banner-2.png" />
+           
+                <Image width={0} height={0} sizes="100vw" alt="promotion" className="w-full h-auto" src="/banner-2.png" />
 
-            </div>
+            
             {/* Conteúdo - Seleção de Valores */}
             <div className="w-full max-w-[600px]">
                 <div className="flex-1 p-6 bg-black">
@@ -181,7 +183,7 @@ export default function Deposito() {
                             <div className="bg-zinc-800 rounded-lg p-4 mb-6">
                                 <h3 className="text-white text-lg font-bold mb-4 text-center">PIX Gerado</h3>
                                 <p className="text-white mb-2 text-center">Vá na área pix do seu banco, procure por "Pix copia e cola" e cole o código abaixo</p>
-                                {/* QR Code
+                                 
                                 <div className="flex justify-center mb-4">
                                     <div className="bg-white p-2 rounded-lg">
                                         <Image
@@ -191,7 +193,7 @@ export default function Deposito() {
                                             height={200}
                                         />
                                     </div>
-                                </div> */}
+                                </div> 
 
                                 {/* Código PIX */}
                                 <div className="bg-zinc-700 p-3 rounded-md flex items-center justify-between mb-4">
