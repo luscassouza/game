@@ -4,24 +4,21 @@ import { Transaction } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Receber o corpo do webhook
-    const body = await req.json();
+    // 1. Receber o corpo do webhook via FormData
+    const formData = await req.formData();
+    const transaction_id = formData.get('transaction_id') as string;
 
-    // 🔑 Normalmente o gateway envia algo como userId e amount
-    const { data } = body;
-
-    if (data.status !== "paid") {
-
-      return 
+    if (!transaction_id) {
+      return NextResponse.json({ error: "transaction_id é obrigatório" }, { status: 400 });
     }
 
     const supabase = supabaseAdmin();
 
-    // Agora a transaction está tipada corretamente
+    // Buscar a transação pelo transaction_id
     const { data: transaction, error: transactionError } = await supabase
       .from("transactions")
       .select("*")
-      .eq("external_id", data.id)
+      .eq("external_id", transaction_id)
       .single() as { data: Transaction | null, error: any };
 
     if (transactionError || !transaction) {
@@ -29,7 +26,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Transação não encontrada" }, { status: 404 });
     }
 
-    // 3. Chamar sua função
+    // Atualizar o status da transação para 'paid'
+    const { error: updateError } = await supabase
+      .from("transactions")
+      .update({ status: 'paid' })
+      .eq("external_id", transaction_id);
+
+    if (updateError) {
+      console.error("Erro ao atualizar status da transação:", updateError);
+      return NextResponse.json({ error: "Erro ao atualizar status da transação" }, { status: 500 });
+    }
+
+    // 3. Chamar sua função para adicionar saldo
     const { error } = await supabase.rpc("add_balance", {
       p_user_id: transaction.user_id,
       p_amount: transaction.amount/100,
